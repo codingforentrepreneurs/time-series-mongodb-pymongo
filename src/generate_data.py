@@ -4,13 +4,21 @@ import random
 import sys
 
 # fix local imports
-# import collection_create
-# import db_client
+import collection_create
+import db_client
 
 
 
 name_choices =  ["Big", "Goat", "Chicken", "Tasty", "Salty", "Fire", "Forest", "Moon", "State", "Texas", "Bear", "California"]
 cuisine_choices = ["Pizza", "Bar Food", "Fast Food", "Pasta","Tacos", "Sushi", "Vegetarian", "Steak", "Burgers"]
+
+
+def get_or_generate_collection(name='rating_over_time'):
+    client = db_client.get_db_client()
+    db = client.business
+    collection_create.create_ts(name=name)
+    collection = db[name]
+    return collection
 
 
 def get_random_name():
@@ -51,8 +59,13 @@ def run(collection, iterations=50, skew_results=True):
               rating = random.choice([4, 5])
           elif cuisine.lower() == "bar food":
               rating = random.choice([1, 2])
+            #   if timestamp > (datetime.datetime.now() - datetime.timedelta(days=500)):
+            #       rating = random.choice([4, 5])
           elif cuisine.lower() == "sushi":
-              rating = get_random_rating(skew_low=False)              
+              rating = get_random_rating(skew_low=False)
+          elif cuisine.lower() == "fast food":
+              if timestamp > (datetime.datetime.now() - datetime.timedelta(days=500)):
+                  rating = random.choice([1, 2])
         data = {
           "metadata": {
             "name": name,
@@ -62,7 +75,10 @@ def run(collection, iterations=50, skew_results=True):
           "timestamp": timestamp
         }
         # send to database
-        print(data)
+        # print(data)
+        result = collection.insert_one(data)
+        if result.acknowledged:
+            completed += 1
         if n > 0 and n % 1000 == 0:
             print(f"Finished {n} of {iterations} items.")
     print(f"Added {completed} items.")
@@ -79,5 +95,5 @@ if __name__ == "__main__":
         name= sys.argv[2]
     except:
         pass
-    collection = None
+    collection = get_or_generate_collection(name=name)
     run(collection, iterations=iterations)
